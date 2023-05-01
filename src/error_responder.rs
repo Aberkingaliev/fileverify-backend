@@ -6,7 +6,7 @@ use rocket::{
 use serde_json::json;
 
 pub struct ApiErrorResponse {
-    pub detail: String,
+    pub detail: &'static str,
     pub status: Status,
 }
 
@@ -24,6 +24,36 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for ApiErrorResponse {
                 .status(Status::InternalServerError)
                 .header(ContentType::JSON)
                 .ok()
+        }
+    }
+}
+
+impl ApiErrorResponse {
+    pub fn unauthorized(detail: &'static str) -> Self {
+        ApiErrorResponse {
+            detail,
+            status: Status::Unauthorized,
+        }
+    }
+
+    pub fn internal_server_error(detail: &'static str) -> Self {
+        ApiErrorResponse {
+            detail,
+            status: Status::InternalServerError,
+        }
+    }
+
+    pub fn not_found(detail: &'static str) -> Self {
+        ApiErrorResponse {
+            detail,
+            status: Status::NotFound,
+        }
+    }
+
+    pub fn bad_request(detail: &'static str) -> Self {
+        ApiErrorResponse {
+            detail,
+            status: Status::BadRequest,
         }
     }
 }

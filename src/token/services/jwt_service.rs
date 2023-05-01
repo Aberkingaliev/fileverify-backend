@@ -48,7 +48,7 @@ impl JwtService {
         user: &UserPayloadDto,
     ) -> Result<TokenBundle, Box<dyn std::error::Error>> {
         dotenv().ok();
-        let dto_for_access = UserClaims::new(Cow::Borrowed(user), 30, TimeForm::Minutes);
+        let dto_for_access = UserClaims::new(Cow::Borrowed(user), 15, TimeForm::Minutes);
         let dto_for_refresh = UserClaims::new(Cow::Borrowed(user), 30, TimeForm::Days);
         let header = Header::new(Algorithm::HS256);
         let key = env::var("SECRET_KEY").expect("There is no key to signing");

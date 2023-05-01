@@ -2,8 +2,8 @@ mod jwt_service;
 mod token_service;
 
 pub use jwt_service::JwtService;
-use serde::{Deserialize, Serialize};
 pub use token_service::TokenService;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct TokenBundle {

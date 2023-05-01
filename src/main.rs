@@ -1,6 +1,7 @@
 #![feature(decl_macro)]
 #![feature(associated_type_bounds)]
 #![feature(impl_trait_projections)]
+#![feature(const_trait_impl)]
 
 mod database_setup;
 use database_setup::get_connection_pool;
@@ -12,15 +13,18 @@ use user::routes::activate;
 mod auth;
 use auth::routes::{login, logout, refresh_route, registration};
 mod error_responder;
+mod extensions;
 mod mail;
 mod token;
+pub mod validation_rule;
+use validation_rule::routes::{create_rule, get_rule};
 extern crate diesel;
 extern crate rocket;
 
 #[catch(422)]
 pub fn unprocessable_entity() -> ApiErrorResponse {
     ApiErrorResponse {
-        detail: "Incorrect data entered".to_string(),
+        detail: "Incorrect data entered",
         status: Status::UnprocessableEntity,
     }
 }
@@ -34,6 +38,7 @@ async fn rocket() -> _ {
             rocket_routes![login, registration, logout, refresh_route,],
         )
         .mount("/api-v1/user", rocket_routes![activate])
+        .mount("/api-v1/validation", rocket_routes![get_rule, create_rule])
         .register("/", catchers![unprocessable_entity])
         .manage(pool)
 }

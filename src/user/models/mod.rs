@@ -7,7 +7,6 @@ use uuid::Uuid;
 pub struct User {
     pub id: Uuid,
     pub name: String,
-    pub username: String,
     pub email: String,
     pub password: String,
     pub is_activated: bool,
@@ -18,7 +17,6 @@ pub struct User {
 #[diesel(table_name = users)]
 pub struct UserRegistrationDto {
     pub name: String,
-    pub username: String,
     pub email: String,
     pub password: String,
     pub activation_link: Option<String>,
@@ -27,7 +25,6 @@ pub struct UserRegistrationDto {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserPayloadDto {
     pub name: String,
-    pub username: String,
     pub email: String,
     pub is_activated: bool,
 }
@@ -42,7 +39,6 @@ impl From<User> for UserPayloadDto {
     fn from(value: User) -> Self {
         UserPayloadDto {
             name: value.name,
-            username: value.username,
             email: value.email,
             is_activated: value.is_activated,
         }
@@ -53,7 +49,6 @@ impl From<UserRegistrationDto> for UserPayloadDto {
     fn from(value: UserRegistrationDto) -> Self {
         UserPayloadDto {
             name: value.name,
-            username: value.username,
             email: value.email,
             is_activated: false,
         }

@@ -3,12 +3,13 @@ use rocket::http::{Cookie, CookieJar};
 use serde_json::{json, Value};
 
 use crate::{
+    auth::api_errors::UNAUTHORIZED,
+    auth::services::{AuthLoginResult, AuthRefreshResult, AuthRegistrationResult, AuthService},
+    auth::utils::AuthUtils,
     error_responder::ApiErrorResponse,
     token::services::TokenService,
     user::models::{UserLoginDto, UserRegistrationDto},
 };
-
-use super::{api_errors::unauthorized, services::AuthService, utils::AuthUtils};
 
 pub struct AuthHandler<'a> {
     connection: &'a mut PgConnection,
@@ -33,8 +34,13 @@ impl<'a> AuthHandler<'a> {
             .user_registration(user)
             .await
         {
-            Ok(user) => user,
-            Err(api_response) => return Err(api_response),
+            AuthRegistrationResult::Ok(user) => user,
+            AuthRegistrationResult::AlreadyRegistred(message) => {
+                return Err(ApiErrorResponse::bad_request(message))
+            }
+            AuthRegistrationResult::UnexpectedError(message) => {
+                return Err(ApiErrorResponse::internal_server_error(message))
+            }
         };
         let json = json!(&registration_response);
         let builded_cookies = AuthUtils::set_token_cookie(
@@ -47,8 +53,14 @@ impl<'a> AuthHandler<'a> {
 
     pub async fn user_login_handler(self, user: UserLoginDto) -> Result<Value, ApiErrorResponse> {
         let login_response = match AuthService::from(self.connection).user_login(user).await {
-            Ok(user) => user,
-            Err(api_response) => return Err(api_response),
+            AuthLoginResult::Ok(user) => user,
+            AuthLoginResult::InvalidPassword(message) => {
+                return Err(ApiErrorResponse::bad_request(message))
+            }
+            AuthLoginResult::NotFound(message) => return Err(ApiErrorResponse::not_found(message)),
+            AuthLoginResult::UnexpectedError(message) => {
+                return Err(ApiErrorResponse::internal_server_error(message))
+            }
         };
 
         let json = json!(&login_response);
@@ -75,14 +87,16 @@ impl<'a> AuthHandler<'a> {
     pub async fn user_refresh_handler(self) -> Result<Value, ApiErrorResponse> {
         let refresh_token = match self.cookies.get("refresh_token") {
             Some(cookie_token) => cookie_token.value().to_string(),
-            None => return Err(unauthorized()),
+            None => return Err(ApiErrorResponse::unauthorized(UNAUTHORIZED)),
         };
         let refresh_response = match AuthService::from(self.connection)
             .refresh_user(refresh_token)
             .await
         {
-            Ok(user) => user,
-            Err(api_response) => return Err(api_response),
+            AuthRefreshResult::Ok(user) => user,
+            AuthRefreshResult::UnexpectedError(message) => {
+                return Err(ApiErrorResponse::internal_server_error(message))
+            }
         };
         let json = serde_json::json!(&refresh_response);
         let builded_cookies = AuthUtils::set_token_cookie(

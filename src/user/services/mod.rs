@@ -2,7 +2,6 @@ use crate::{
     schema::users,
     schema::users::dsl::*,
     user::models::{User, UserRegistrationDto},
-    ApiErrorResponse,
 };
 
 use diesel::pg::PgConnection;
@@ -12,7 +11,7 @@ use diesel::RunQueryDsl;
 use rocket::response::Redirect;
 use uuid::Uuid;
 
-use super::api_errors::invalid_activation_link;
+use super::api_errors::{INVALID_ACTIVATION_LINK, UNEXPECT_DB_ERROR};
 
 pub struct UserService<'a> {
     connection: &'a mut PgConnection,
@@ -30,24 +29,30 @@ impl<'a> From<&'a mut PgConnection> for UserService<'a> {
     }
 }
 
+pub enum UserActivationResult {
+    Ok(Redirect),
+    InvalidActivationLink(&'static str),
+    UnexpectedError(&'static str),
+}
+
 impl<'a> UserService<'a> {
-    pub async fn activate_account(
-        &'a mut self,
-        link: String,
-    ) -> Result<Redirect, ApiErrorResponse> {
+    pub async fn activate_account(&'a mut self, link: String) -> UserActivationResult {
         match users
             .filter(activation_link.eq(&link))
             .get_result::<User>(self.connection)
         {
-            Ok(_) => match self.update_activation_link(link).await {
-                Ok(_) => return Ok(Redirect::to("https://google.com")),
-                Err(_) => return Err(invalid_activation_link()),
+            Ok(_) => match self.update_activation(link).await {
+                Ok(_) => return UserActivationResult::Ok(Redirect::to("https://google.com")),
+                Err(_) => return UserActivationResult::UnexpectedError(UNEXPECT_DB_ERROR),
             },
-            Err(_) => return Err(invalid_activation_link()),
+            Err(Error::NotFound) => {
+                return UserActivationResult::InvalidActivationLink(INVALID_ACTIVATION_LINK)
+            }
+            Err(_) => return UserActivationResult::UnexpectedError(UNEXPECT_DB_ERROR),
         }
     }
 
-    pub async fn update_activation_link(&'a mut self, link: String) -> Result<usize, Error> {
+    pub async fn update_activation(&'a mut self, link: String) -> Result<usize, Error> {
         let update_procedure = diesel::update(users::table.filter(users::activation_link.eq(link)))
             .set(users::is_activated.eq(true))
             .execute(self.connection);

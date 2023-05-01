@@ -1,10 +1,2 @@
-use rocket::http::Status;
-
-use crate::ApiErrorResponse;
-
-pub fn invalid_activation_link() -> ApiErrorResponse {
-    ApiErrorResponse {
-        detail: "Activation link invalid".to_string(),
-        status: Status::BadRequest,
-    }
-}
+pub const INVALID_ACTIVATION_LINK: &str = "Validation rules not found";
+pub const UNEXPECT_DB_ERROR: &str = "Unexpected database error";
