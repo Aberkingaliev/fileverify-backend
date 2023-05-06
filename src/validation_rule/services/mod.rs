@@ -174,7 +174,9 @@ impl<'a> ValidationRuleService<'a> {
                 return Ok(validation_rule);
             }) {
             Ok(rule) => ValidationRuleCreateResult::Ok(rule),
-            Err(_) => return ValidationRuleCreateResult::UnexpectedError(UNEXPECT_DB_ERROR),
+            Err(_) => {
+                return ValidationRuleCreateResult::UnexpectedError(UNEXPECT_DB_ERROR);
+            }
         }
     }
 }
