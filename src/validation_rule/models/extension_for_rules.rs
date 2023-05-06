@@ -16,7 +16,7 @@ pub struct ExtensionForRules {
     pub extension_id: i32,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = extension_for_rules)]
 pub struct NewExtensionForRules {
     pub validation_rule_id: Uuid,

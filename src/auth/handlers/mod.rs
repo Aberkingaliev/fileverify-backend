@@ -94,6 +94,9 @@ impl<'a> AuthHandler<'a> {
             .await
         {
             AuthRefreshResult::Ok(user) => user,
+            AuthRefreshResult::Unauthorized(message) => {
+                return Err(ApiErrorResponse::unauthorized(message))
+            }
             AuthRefreshResult::UnexpectedError(message) => {
                 return Err(ApiErrorResponse::internal_server_error(message))
             }

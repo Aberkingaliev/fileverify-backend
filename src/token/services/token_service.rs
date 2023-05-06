@@ -44,16 +44,12 @@ impl<'a> TokenService<'a> {
         return deleted_token;
     }
 
-    pub async fn get_token_by_refresh(
-        self,
-        ref_token: String,
-    ) -> Result<Token, Box<dyn std::error::Error>> {
+    pub async fn get_token_by_refresh(self, ref_token: String) -> Result<Token, Error> {
         let founded_token = tokens::table
             .filter(tokens::refresh_token.eq(ref_token))
-            .get_result::<Token>(self.connection)
-            .expect("Error during request DB");
+            .get_result::<Token>(self.connection);
 
-        return Ok(founded_token);
+        return founded_token;
     }
 
     pub async fn get_token_by_user_id(self, user_id: &Uuid) -> Result<Token, Error> {

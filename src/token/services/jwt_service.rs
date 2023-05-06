@@ -1,6 +1,9 @@
 use chrono::{Duration, Utc};
 use dotenv::dotenv;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{
+    decode, encode, errors::Error, Algorithm, DecodingKey, EncodingKey, Header, TokenData,
+    Validation,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::user::models::UserPayloadDto;
@@ -73,18 +76,13 @@ impl JwtService {
         return Ok(token_bundle);
     }
 
-    pub fn validate_token(token: &String) -> Result<UserPayloadDto, Box<dyn std::error::Error>> {
+    pub fn validate_token(token: &String) -> Result<TokenData<UserClaims>, Error> {
         let key = env::var("SECRET_KEY").expect("There is no key to signing");
 
         let validation = &Validation::new(Algorithm::HS256);
         let decoded_data =
-            decode::<UserClaims>(token, &DecodingKey::from_secret(key.as_ref()), &validation)
-                .map_err(|err| {
-                    println!("Error while decoding token: {:?}", token);
-                    err
-                })?;
+            decode::<UserClaims>(token, &DecodingKey::from_secret(key.as_ref()), &validation);
 
-        let claim = decoded_data.claims.user;
-        Ok(claim.into_owned())
+        return decoded_data;
     }
 }

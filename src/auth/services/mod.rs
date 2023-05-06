@@ -1,8 +1,8 @@
 use crate::{
     auth::api_errors::{
         INVALID_PASSWORD, PASSWORD_HASHING_ERROR, PASSWORD_VERIFICATION_ERROR,
-        TOKEN_GENERATION_ERROR, TOKEN_VALIDATION_ERROR, UNEXPECT_DB_ERROR, USER_ALREADT_EXIST,
-        USER_NOT_FOUND,
+        TOKEN_GENERATION_ERROR, TOKEN_VALIDATION_ERROR, UNAUTHORIZED, UNEXPECT_DB_ERROR,
+        USER_ALREADT_EXIST, USER_NOT_FOUND,
     },
     mail::message_layouts::activation_message,
     mail::services::MailService,
@@ -12,7 +12,8 @@ use crate::{
     user::services::UserService,
 };
 use bcrypt::{hash, verify};
-use diesel::PgConnection;
+use diesel::{result::Error, PgConnection};
+use jsonwebtoken::errors::ErrorKind;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -40,6 +41,7 @@ pub enum AuthRegistrationResult {
 
 pub enum AuthRefreshResult {
     Ok(AuthResponse),
+    Unauthorized(&'static str),
     UnexpectedError(&'static str),
 }
 
@@ -170,12 +172,18 @@ impl<'a> AuthService<'a> {
             .await
         {
             Ok(token) => token,
+            Err(Error::NotFound) => return AuthRefreshResult::Unauthorized(UNAUTHORIZED),
             Err(_) => return AuthRefreshResult::UnexpectedError(UNEXPECT_DB_ERROR),
         };
 
         let validation_token = match JwtService::validate_token(&current_token.refresh_token) {
-            Ok(payload) => payload,
-            Err(_) => return AuthRefreshResult::UnexpectedError(TOKEN_VALIDATION_ERROR),
+            Ok(payload) => payload.claims.user.into_owned(),
+            Err(error) => match error.kind() {
+                ErrorKind::ExpiredSignature => {
+                    return AuthRefreshResult::Unauthorized(UNAUTHORIZED)
+                }
+                _ => return AuthRefreshResult::UnexpectedError(TOKEN_VALIDATION_ERROR),
+            },
         };
         let generated_tokens = match JwtService::generate_tokens(&validation_token).await {
             Ok(tokens) => tokens,
